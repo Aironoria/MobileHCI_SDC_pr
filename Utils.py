@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
@@ -54,7 +56,7 @@ class ConfusionMatrix(object):
         print(table)
         return str(acc)
 
-    def plot(self):  # 绘制混淆矩阵
+    def plot(self,root,tittle):  # 绘制混淆矩阵
         matrix = self.matrix
         print(matrix)
         plt.imshow(matrix, cmap=plt.cm.Blues)
@@ -67,7 +69,7 @@ class ConfusionMatrix(object):
         plt.colorbar()
         plt.xlabel('True Labels')
         plt.ylabel('Predicted Labels')
-        plt.title('Confusion matrix (acc=' + self.summary() + ')')
+        plt.title('Confusion matrix (acc.jpg=' + self.summary() + ')')
 
         # 在图中标注数量/概率信息
         thresh = matrix.max() / 2
@@ -81,4 +83,5 @@ class ConfusionMatrix(object):
                          color="white" if info > thresh else "black")
         plt.tight_layout()
         plt.show()
+        plt.savefig(os.path.join(root, tittle))
 
