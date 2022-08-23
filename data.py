@@ -1,4 +1,5 @@
 import os
+import random
 
 from torchvision import transforms
 
@@ -11,15 +12,18 @@ torch.set_printoptions(precision=4,sci_mode=False)
 
 
 class FoodDataset(Dataset):
-    def __init__(self, root, split_num =5,train=True, transform=None):
+    def __init__(self, root, split = False,train=True, transform=None):
         self.labels = [category for category in os.listdir(root) if os.path.isdir(os.path.join(root, category))]
         self.path_list = self.get_data_list(root)
-        self.split_num=split_num
+        self.length = len(self.path_list)
+        self.split_num=10
         self.transform = transforms.Compose([
         transforms.Normalize([-1.005378, 0.18341783, 0.017716132, 0.021392668, -0.08647295, -0.076252915] ,[0.03257781, 0.06589742, 0.035365306, 0.27180845, 0.41038275, 0.40504447])
     ])
+
     def __len__(self):
         return len(self.path_list) *self.split_num
+
 
     def __getitem__(self, index):
         a = index // len(self.path_list)
@@ -33,8 +37,8 @@ class FoodDataset(Dataset):
         split_len = acc.shape[0] /self.split_num
         item = b.loc[ a *split_len: (a+1) *split_len -1]
         item= torch.tensor(item.values).to(torch.float32)
-        item = torch.reshape(item.T,(6,15,-1))
-        item = self.transform(item)
+        item = torch.reshape(item.T,(6,10,-1))
+        item =self.transform(item)
         return item ,label
 
     def get_data_list(self, root):
@@ -49,12 +53,37 @@ class FoodDataset(Dataset):
             res[i]=self.labels[i]
         return res
 
+def split(dataset):
+    split_first_then_shuffle =True
+    split_first_then_shuffle =False
+    if split_first_then_shuffle:
+        train_size = int(len(dataset) * 0.8)
+        test_size = len(dataset) - train_size
+        return torch.utils.data.random_split(dataset, [train_size, test_size])
+    else:
+        indices_list = list(range(len(dataset.path_list)))
+        random.shuffle(indices_list)
+        offset = int(len(indices_list) * 0.8)
+        sublist_1 = indices_list[:offset]
+        sublist_2 = indices_list[offset:]
+        train_indices = []
+        test_indices = []
+
+        for i in range(dataset.split_num):
+            train_indices += [item + i * len(dataset.path_list) for item in sublist_1]
+            test_indices += [item + i * len(dataset.path_list) for item in sublist_2]
+
+        train_dataset = torch.utils.data.Subset(dataset, train_indices)
+        test_dataset = torch.utils.data.Subset(dataset, test_indices)
+        return train_dataset, test_dataset
+
 def load_dataset(root):
-    torch.manual_seed(0)
+    seed = 0
+    torch.manual_seed(seed)
+    random.seed(seed)
     dataset = FoodDataset(root)
-    train_size = int( len(dataset) * 0.8)
-    test_size = len(dataset) - train_size
-    return torch.utils.data.random_split(dataset,[train_size,test_size])
+    return split(dataset)
+
 
 # a = FoodDataset("content")
 # b = a[300]
@@ -90,5 +119,6 @@ def getStat(train_data):
 
 
 if __name__ == "__main__":
-    # getStat(FoodDataset("content", split_num=1))
+    # getStat(FoodDataset("content"))
     print(FoodDataset("content")[0][0].size())
+    # train,test =  load_dataset("content")

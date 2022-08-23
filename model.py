@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-shape_1 = 20*7*8
+shape_1 = 30*6*8
 
 class Net(nn.Module):
     def __init__(self):
         super(Net,self).__init__()
-        self.conv1 = nn.Conv2d(6,10,kernel_size=5)
-        self.conv2 = nn.Conv2d(10,20,kernel_size=5)
+        self.conv1 = nn.Conv2d(6,15,kernel_size=3)
+        self.conv2 = nn.Conv2d(15,30,kernel_size=3)
         self.fc1 =  nn.Linear(shape_1, 200)
         self.fc2 = nn.Linear(200,4)
 
