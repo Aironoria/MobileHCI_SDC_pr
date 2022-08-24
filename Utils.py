@@ -14,16 +14,20 @@ class ConfusionMatrix(object):
 
     def update(self, preds, labels):
         for p, t in zip(preds, labels):  # pred为预测结果，labels为真实标签
-            self.matrix[p, t] += 1  # 根据预测结果和真实标签的值统计数量，在混淆矩阵相应位置+1
+            self.matrix[p, t] += 1  # 根据预测结果和真实标签的值统计数量，在混淆矩阵相应位置+120_10
 
-    def summary(self):  # 计算指标函数
-        # calculate accuracy
+    def get_acc(self):
         sum_TP = 0
         n = np.sum(self.matrix)
         for i in range(self.num_classes):
             sum_TP += self.matrix[i, i]  # 混淆矩阵对角线的元素之和，也就是分类正确的数量
-        acc = sum_TP / n  # 总体准确率
-        print("the model accuracy is ", acc)
+        return  sum_TP / n  # 总体准确率
+
+
+    def summary(self):  # 计算指标函数
+        n = np.sum(self.matrix)
+        # calculate accuracy
+        print("the model accuracy is ", str(self.get_acc()))
 
         # kappa
         sum_po = 0
@@ -54,11 +58,10 @@ class ConfusionMatrix(object):
 
             table.add_row([self.labels[i], Precision, Recall, Specificity])
         print(table)
-        return str(acc)
 
     def plot(self,root,tittle):  # 绘制混淆矩阵
         matrix = self.matrix
-        print(matrix)
+        # print(matrix)
         plt.imshow(matrix, cmap=plt.cm.Blues)
 
         # 设置x轴坐标label
@@ -69,7 +72,7 @@ class ConfusionMatrix(object):
         plt.colorbar()
         plt.xlabel('True Labels')
         plt.ylabel('Predicted Labels')
-        plt.title('Confusion matrix (acc.jpg=' + self.summary() + ')')
+        plt.title('Confusion matrix (acc=' + str(self.get_acc()) + ')')
 
         # 在图中标注数量/概率信息
         thresh = matrix.max() / 2
@@ -82,6 +85,28 @@ class ConfusionMatrix(object):
                          horizontalalignment='center',
                          color="white" if info > thresh else "black")
         plt.tight_layout()
-        plt.show()
-        plt.savefig(os.path.join(root, tittle))
+        plt.savefig(os.path.join(root, tittle),bbox_inches = 'tight')
+        plt.clf()
+        # plt.show()
 
+
+
+def plot_loss(save_dir,train_loss, train_acc , test_loss, test_acc):
+    plt.plot(np.arange(len(train_loss)), train_loss, label="train loss.jpg")
+    plt.plot(np.arange(len(test_loss)), test_loss, label="valid loss.jpg")
+
+    plt.title('loss.jpg')
+    plt.legend()  # 显示图例
+    plt.savefig(os.path.join(save_dir, "loss.jpg"),bbox_inches = 'tight')
+    # plt.show()
+    plt.clf()
+    plt.plot(np.arange(len(train_acc)), train_acc, label="train acc.jpg")
+
+    plt.plot(np.arange(len(test_acc)), test_acc, label="valid acc.jpg")
+    plt.legend()  # 显示图例
+    plt.xlabel('epoches')
+    # plt.ylabel("epoch")
+    plt.title('acc.jpg')
+    plt.savefig(os.path.join(save_dir, "acc.jpg"),bbox_inches = 'tight')
+    # plt.show()
+    plt.clf()

@@ -2,7 +2,7 @@ import os
 import random
 
 from torchvision import transforms
-
+import config
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import torch
 import numpy as np
@@ -16,7 +16,7 @@ class FoodDataset(Dataset):
         self.labels = [category for category in os.listdir(root) if os.path.isdir(os.path.join(root, category))]
         self.path_list = self.get_data_list(root)
         self.length = len(self.path_list)
-        self.split_num=10
+        self.split_num= config.split_num
         self.transform = transforms.Compose([
         transforms.Normalize([-1.005378, 0.18341783, 0.017716132, 0.021392668, -0.08647295, -0.076252915] ,[0.03257781, 0.06589742, 0.035365306, 0.27180845, 0.41038275, 0.40504447])
     ])
@@ -37,7 +37,18 @@ class FoodDataset(Dataset):
         split_len = acc.shape[0] /self.split_num
         item = b.loc[ a *split_len: (a+1) *split_len -1]
         item= torch.tensor(item.values).to(torch.float32)
-        item = torch.reshape(item.T,(6,10,-1))
+
+
+        # 10   : 10
+        #120_10  : 30
+
+        #2 ： 25
+        #5： 15
+        shape_dict = {1:30,
+                      2:25,
+                      5:15,
+                      10:10}
+        item = torch.reshape(item.T,(6,shape_dict.get(self.split_num),-1))
         item =self.transform(item)
         return item ,label
 
@@ -120,5 +131,6 @@ def getStat(train_data):
 
 if __name__ == "__main__":
     # getStat(FoodDataset("content"))
-    print(FoodDataset("content")[0][0].size())
-    # train,test =  load_dataset("content")
+    a = FoodDataset("content")
+    print(a[0])
+    train,test =  load_dataset("content")

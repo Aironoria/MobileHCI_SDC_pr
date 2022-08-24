@@ -3,6 +3,9 @@ import os
 import numpy as np
 from torch import optim
 import torch.nn.functional as F
+
+import Utils
+import config
 import data
 import model
 import torch
@@ -11,6 +14,14 @@ import test
 from Utils import ConfusionMatrix
 import matplotlib.pyplot as plt
 
+def get_save_dir():
+  root="res"
+  size = len(train_dataset) +len(test_dataset)
+  size= int(size/config.split_num)
+  res= os.path.join( root, str(size) +"_" +str(config.split_num) )
+  if not os.path.exists(res):
+    os.makedirs(res)
+  return res
 
 def plot_confusion_matrix(train):
   data_loader = train_loader if train else test_loader
@@ -25,8 +36,8 @@ def plot_confusion_matrix(train):
       # test_loss += F.nll_loss(output, target, size_average=False).item()
       _, predicted = torch.max(outputs.data, 1)
       confusion.update(predicted.numpy(), labels.numpy())
-  confusion.plot(save_dir ,title)
-  confusion.summary()
+  confusion.plot(get_save_dir() ,title)
+  # confusion.summary()
 
 def eval(epoch):
   net.eval()
@@ -44,10 +55,10 @@ def eval(epoch):
   test_loss.append(loss_)
   correct = correct * 100 / data_len
   test_acc.append(correct)
-  print("Test Loss: {:20.4f} ACC: {:20.2f}%".format(loss_, correct))
+  # print("Test Loss: {:20.4f} ACC: {:20.2f}%".format(loss_, correct))
 
 
-def train(epoch):
+def train_one_epoch(epoch):
   net.train()
   correct = 0
   loss_=0
@@ -59,8 +70,6 @@ def train(epoch):
     optimizer.step()
 
     loss_+=loss.item()
-
-
     _, predicted = torch.max(outputs.data, 1)
     correct += predicted.eq(labels.data.view_as(predicted)).sum().item()
     # if batch_idx % 2 == 0:
@@ -72,47 +81,33 @@ def train(epoch):
   train_loss.append(loss_)
   correct =correct *100 / data_len
   train_acc.append(correct)
-  print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%".format( epoch,loss_,correct),end="\t")
+  # print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%".format( epoch,loss_,correct),end="\t")
 
 
-save_dir = "result/2"
-os.makedirs(save_dir)
-n_epochs = 3
-torch.set_printoptions(precision=4, sci_mode=False)
-train_dataset, test_dataset = data.load_dataset("content")
 
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+for i in [1,2,5,10]:
+  config.split_num=i
+  train_dataset, test_dataset = data.load_dataset("content")
+  print("Split Num = ",i ,end="\t")
+  print("Train dataset {} , Test Dataset {} ".format(len(train_dataset), len(test_dataset)))
+  train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+  test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-net = model.Net()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+  net = model.Net()
+  optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-train_loss=[]
-train_acc =[]
-test_loss=[]
-test_acc=[]
+  train_loss = []
+  train_acc = []
+  test_loss = []
+  test_acc = []
 
-for epoch in range(n_epochs):
-  train(epoch)
-  eval(epoch)
-torch.save(net, 'model.pth')
-plt.plot(np.arange(len(train_loss)), train_loss,label="train loss.jpg")
-plt.plot(np.arange(len(test_loss)), test_loss, label="valid loss.jpg")
-
-plt.title('loss.jpg')
-plt.legend() #显示图例
-plt.savefig(os.path.join( save_dir, "loss.jpg"))
-plt.show()
-plt.clf()
-plt.plot(np.arange(len(train_acc)), train_acc, label="train acc.jpg")
-
-plt.plot(np.arange(len(test_acc)), test_acc, label="valid acc.jpg")
-plt.legend() #显示图例
-plt.xlabel('epoches')
-#plt.ylabel("epoch")
-plt.title('acc.jpg')
-plt.savefig(os.path.join( save_dir, "acc.jpg"))
-plt.show()
-plt.clf()
-plot_confusion_matrix(True)
-plot_confusion_matrix(False)
+  for epoch in range(config.n_epochs):
+    train_one_epoch(epoch)
+    eval(epoch)
+    if epoch% 25 ==0:
+      print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%  Test Loss: {:20.4f} ACC: {:20.2f}%"
+            .format(epoch, train_loss[-1], train_acc[-1],test_loss[-1],test_acc[-1]))
+  torch.save(net, 'model.pth')
+  Utils.plot_loss(get_save_dir(), train_loss, train_acc, test_loss, test_acc)
+  plot_confusion_matrix(True)
+  plot_confusion_matrix(False)
