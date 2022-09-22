@@ -14,16 +14,8 @@ import test
 from Utils import ConfusionMatrix
 import matplotlib.pyplot as plt
 
-def get_save_dir():
-  root="res"
-  size = len(train_dataset) +len(test_dataset)
-  size= int(size/config.split_num)
-  res= os.path.join( root, str(size) +"_" +str(config.split_num) )
-  if not os.path.exists(res):
-    os.makedirs(res)
-  return res
 
-def plot_confusion_matrix(train):
+def plot_confusion_matrix(train,save):
   data_loader = train_loader if train else test_loader
   title = "conf_train.jpg" if train else "conf_test.jpg"
   net.eval()
@@ -36,7 +28,7 @@ def plot_confusion_matrix(train):
       # test_loss += F.nll_loss(output, target, size_average=False).item()
       _, predicted = torch.max(outputs.data, 1)
       confusion.update(predicted.numpy(), labels.numpy())
-  confusion.plot(get_save_dir() ,title)
+  confusion.plot(get_save_dir() ,title,save)
   # confusion.summary()
 
 def eval(epoch):
@@ -63,8 +55,10 @@ def train_one_epoch(epoch):
   correct = 0
   loss_=0
   for batch_idx, (data, labels) in enumerate(train_loader):
+
     optimizer.zero_grad()
     outputs = net(data)
+
     loss = F.cross_entropy(outputs, labels)
     loss.backward()
     optimizer.step()
@@ -84,16 +78,23 @@ def train_one_epoch(epoch):
   # print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%".format( epoch,loss_,correct),end="\t")
 
 
+def get_save_dir():
+  root="res"
+  size = len(train_dataset) +len(test_dataset)
+  res= os.path.join( root, str(size)  +"_" + str(config.n_epochs) )
+  if not os.path.exists(res):
+    os.makedirs(res)
+  return res
 
-for i in [1,2,5,10]:
-  config.split_num=i
-  train_dataset, test_dataset = data.load_dataset("content")
-  print("Split Num = ",i ,end="\t")
+
+for i in [3]:
+  train_dataset, test_dataset = data.load_dataset("edge_after_converted")
   print("Train dataset {} , Test Dataset {} ".format(len(train_dataset), len(test_dataset)))
   train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
   test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
   net = model.Net()
+  # net = torch.load("model.pt")
   optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
   train_loss = []
@@ -107,7 +108,17 @@ for i in [1,2,5,10]:
     if epoch% 25 ==0:
       print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%  Test Loss: {:20.4f} ACC: {:20.2f}%"
             .format(epoch, train_loss[-1], train_acc[-1],test_loss[-1],test_acc[-1]))
-  torch.save(net, 'model.pth')
+      plot_confusion_matrix(train=True,save=False)
+
+  torch.save(net, 'model_after_split.pt')
+  plot_confusion_matrix(train=True,save=True)
+  plot_confusion_matrix(train=False, save=True)
   Utils.plot_loss(get_save_dir(), train_loss, train_acc, test_loss, test_acc)
-  plot_confusion_matrix(True)
-  plot_confusion_matrix(False)
+
+
+  # net = torch.load("model.pt")
+  # plot_confusion_matrix(False,False)
+  # print(train_dataset.dataset.labels)
+
+
+
