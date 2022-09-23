@@ -19,14 +19,14 @@ class FoodDataset(Dataset):
             100:[-0.9608181, 0.31008407, -0.009351776, 0.0054555144, -0.23369068, -0.3488236],
             10:[-0.9608181, 0.31008407, -0.009351776, 0.054554835, -2.3369055, -3.4882338],
             1:[-0.9608181, 0.31008407, -0.009351776, 0.54554874, -23.369055, -34.882328],
-            1000:[-0.9608181, 0.31008407, -0.009351776, 0.0005455491, -0.023369053, -0.034882355],
+            1000:[-0.957993, 0.35382167, -0.0040243436, 0.009622897, 0.012073863, -0.0003459249],
             5000:[-0.972108, 0.29212847, 0.0144133, -0.00012562927, -0.0036951215, -0.005630902]
         }
         std_dict={
             100: [0.029218799, 0.04372534, 0.02839355, 2.1205835, 3.1814947, 3.1679814],
             10:[0.029218799, 0.04372534, 0.02839355, 21.205835, 31.814943, 31.679813],
             1:[0.029218799, 0.04372534, 0.02839355, 212.05826, 318.1492, 316.7982],
-            1000:[0.029218799, 0.04372534, 0.02839355, 0.21205823, 0.31814966, 0.3167982],
+            1000:[0.02470078, 0.032860123, 0.023139982, 0.19096272, 0.25724426, 0.33188197],
             5000:[0.024947584, 0.033967372, 0.021579275, 0.0327926, 0.04770578, 0.04992873]
         }
 
@@ -63,7 +63,7 @@ class FoodDataset(Dataset):
         label =torch.tensor(self.labels.index(label))
 
         item = pd.read_csv(path)
-        item = item / [1,1,1,1000,1000,1000]
+        item = item / [1,1,1,self.gyrobase,self.gyrobase,self.gyrobase]
         item = torch.tensor(item.values).to(torch.float32)
         # item = self.min_max_scaler(item)
 
@@ -103,7 +103,7 @@ def split(dataset):
     return torch.utils.data.random_split(dataset, [train_size, test_size])
 
 def load_dataset(root):
-    seed = 0
+    seed = 1234
     torch.manual_seed(seed)
     random.seed(seed)
     dataset = FoodDataset(root)
@@ -150,7 +150,7 @@ def getStat(train_data):
 
 if __name__ == "__main__":
 
-    a = FoodDataset("edge_after_converted")
+    a = FoodDataset("data_23_edge_output_converted")
     a.transform=None
     getStat(a)
     print(a.labels)

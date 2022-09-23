@@ -15,7 +15,7 @@ from Utils import ConfusionMatrix
 import matplotlib.pyplot as plt
 
 
-def plot_confusion_matrix(train,save):
+def plot_confusion_matrix(train,save,save_dir=""):
   data_loader = train_loader if train else test_loader
   title = "conf_train.jpg" if train else "conf_test.jpg"
   net.eval()
@@ -28,7 +28,7 @@ def plot_confusion_matrix(train,save):
       # test_loss += F.nll_loss(output, target, size_average=False).item()
       _, predicted = torch.max(outputs.data, 1)
       confusion.update(predicted.numpy(), labels.numpy())
-  confusion.plot(get_save_dir() ,title,save)
+  confusion.plot(save_dir ,title,save)
   # confusion.summary()
 
 def eval(epoch):
@@ -78,22 +78,23 @@ def train_one_epoch(epoch):
   # print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%".format( epoch,loss_,correct),end="\t")
 
 
-def get_save_dir():
+def get_save_dir(prefix):
   root="res"
   size = len(train_dataset) +len(test_dataset)
-  res= os.path.join( root, str(size)  +"_" + str(config.n_epochs) )
+  res= os.path.join( root,prefix +"_"+ str(size)  +"_" + str(config.n_epochs) )
   if not os.path.exists(res):
     os.makedirs(res)
   return res
 
 
 for i in [3]:
-  train_dataset, test_dataset = data.load_dataset("edge_after_converted")
-  print("Train dataset {} , Test Dataset {} ".format(len(train_dataset), len(test_dataset)))
+  root = "data_23_edge_output_converted_augmented"
+  train_dataset, test_dataset = data.load_dataset(root)
+  print("Train dataset {} , Test Dataset {}, Total {} ".format(len(train_dataset), len(test_dataset),len(train_dataset)+len(test_dataset)))
   train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
   test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-  net = model.Net()
+  net = model.Net(root)
   # net = torch.load("model.pt")
   optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
@@ -110,10 +111,11 @@ for i in [3]:
             .format(epoch, train_loss[-1], train_acc[-1],test_loss[-1],test_acc[-1]))
       plot_confusion_matrix(train=True,save=False)
 
-  torch.save(net, 'model_after_split.pt')
-  plot_confusion_matrix(train=True,save=True)
-  plot_confusion_matrix(train=False, save=True)
-  Utils.plot_loss(get_save_dir(), train_loss, train_acc, test_loss, test_acc)
+  pic_save_dir = get_save_dir(root)
+  torch.save(net, root +'.pt')
+  plot_confusion_matrix(train=True,save=True,save_dir=pic_save_dir)
+  plot_confusion_matrix(train=False, save=True,save_dir=pic_save_dir)
+  Utils.plot_loss(pic_save_dir, train_loss, train_acc, test_loss, test_acc)
 
 
   # net = torch.load("model.pt")

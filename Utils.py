@@ -1,5 +1,7 @@
 import os.path
 import json
+import random
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,6 +9,7 @@ import torch
 from matplotlib.ticker import MultipleLocator
 from prettytable import PrettyTable
 from torch.utils.mobile_optimizer import optimize_for_mobile
+import shutil
 
 class ConfusionMatrix(object):
 
@@ -160,11 +163,11 @@ def pth_to_pt():
     input = torch.rand(1,6,15,16)
     torch.jit.trace(model,input).save("model.pt")
 
-def pt_to_ptl():
-    model = torch.load("model2.pt")
+def pt_to_ptl(model_name):
+    model = torch.load(model_name +".pt")
     model.eval()
     scripted_module = torch.jit.script(model)
-    optimize_for_mobile(scripted_module)._save_for_lite_interpreter("model2.ptl")
+    optimize_for_mobile(scripted_module)._save_for_lite_interpreter(model_name+  ".ptl")
 
 def plot_dir(dir):
     for file in os.listdir( dir):
@@ -174,7 +177,8 @@ def plot_dir(dir):
         gyro = pd.read_csv(dir+'/'+file+'/GYRO.csv')
         plot_data(acc, gyro,dir, file)
 
-def convert_to_edgeimpulse(root,save_dir):
+def convert_to_edgeimpulse(root):
+    save_dir = root +"ccc_edge"
     name = "cjy"
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -184,12 +188,12 @@ def convert_to_edgeimpulse(root,save_dir):
         for filename in os.listdir(dir):
             acc = pd.read_csv(dir + "/" + filename + "/ACC.csv")
             gyro = pd.read_csv(dir + '/' + filename + '/GYRO.csv')
+            # gyro = gyro/100
             data = pd.concat([acc,gyro],axis=1)
-            # data['timestamp']= ids
-            # data = pd.DataFrame(data,columns=data,index=ids)
             data.to_csv(save_dir+ "/"+ gesture + "."+filename+".csv",index_label="timestamp")
 
-def edgeimpulse_to_csv(root,save_dir):
+def edgeimpulse_to_csv(root):
+    save_dir = root+"_converted"
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     for file in os.listdir(root):
@@ -198,26 +202,110 @@ def edgeimpulse_to_csv(root,save_dir):
         if not os.path.exists(save_file_parent):
             os.mkdir(save_file_parent)
         save_file = os.path.join(save_file_parent,str(len(os.listdir(save_file_parent))) +".csv")
-        with open(os.path.join(root,file),encoding="utf-8") as f:
+        with open(os.path.join(root,file)) as f:
             df = json.load(f)['payload']['values']
             df = pd.DataFrame(df)
             if(len(df) < 400):
                 print(file + " only has " + str(len(df)) + " lines")
+            if(len(df) >500):
+                continue # unsplited
             df = df.loc[0:399]
             df.to_csv(save_file,index= False)
 
+def split_data(root):
+    save_dir = root + "_splited"
+    # if not os.path.exists(save_dir):
+    #     os.mkdir(save_dir)
+    for gesture in os.listdir(root):
+        # if not os.path.exists(os.path.join(save_dir, gesture)):
+        #     os.mkdir(os.path.join(save_dir, gesture))
+        for dir in os.listdir(os.path.join(root,gesture)):
+            if dir == ".DS_Store":
+                continue
+            gyro = pd.read_csv(os.path.join(root,gesture,dir,"ACC.csv"))
+            acc = pd.read_csv(os.path.join(root,gesture,dir,"GYRO.csv"))
+            for i in range(3):
+                save_file = os.path.join(save_dir,gesture,dir+"_"+str(i))
+                os.makedirs(save_file)
+                gyro_df = gyro.loc[i*400:i*400 +399]
+                acc_df = acc.loc[i*400:i*400 +399]
+                gyro_df.to_csv(save_file +"/ACC.csv",index=False)
+                acc_df.to_csv(save_file +"/GYRO.csv",index=False)
+    return save_dir
+
+def random_sample_n(root,num):
+    unselected = random.sample(os.listdir(root+"/Nothing"), len(os.listdir(root+"/Nothing")) - num)
+    for file in unselected:
+        os.remove(os.path.join(root,"Nothing",file))
+    return root
+
+def augment():
+    root="data_23_edge_output_converted"
+
+    for gesture in os.listdir(root):
+        save_dir = os.path.join(root+"_augmented",gesture)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        if gesture == "Nugget" or gesture == "Hamburg":
+            for file in os.listdir(os.path.join(root,gesture)):
+                df = pd.read_csv(os.path.join(root,gesture,file))
+                for i in range(3):
+                    df.loc[i *10 : 379 + i*10 ].to_csv(os.path.join(save_dir,str(len(os.listdir(save_dir)))+".csv"), index=False)
+        else:
+            for file in os.listdir(os.path.join(root,gesture)):
+                df = pd.read_csv(os.path.join(root, gesture, file))
+                df.loc[10 :390-1].to_csv(os.path.join(save_dir,str(len(os.listdir(save_dir)))+".csv"),index=False)
+    pass
+
+def two_to_one_csv(root):
+    for gesture in os.listdir(root):
+        save_dir = os.path.join(root + "_merged", gesture)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        for dir in os.listdir(os.path.join(root, gesture)):
+            acc = pd.read_csv(os.path.join(root,gesture,dir,"ACC.csv"))
+            gyro = pd.read_csv(os.path.join(root,gesture,dir,"GYRO.csv"))
+            df = pd.concat([acc,gyro],axis=1)
+            df.to_csv(save_dir +"/"+dir+".csv",index=False)
+    return root+"_merged"
+
+
+def get_n_nothing_from_content(nums):
+    save_dir =str(nums)+"_Nothing"
+    if os.path.exists(save_dir):
+        shutil.rmtree(save_dir)
+    os.mkdir(save_dir)
+    shutil.copytree("content/Nothing",save_dir+"/Nothing")
+    splited_data = split_data(save_dir)
+    merged_splited_data = two_to_one_csv(splited_data)
+    sampled_data = random_sample_n(merged_splited_data,nums)
+    shutil.rmtree(save_dir)
+    shutil.rmtree(splited_data)
+    os.rename(sampled_data,save_dir)
+
+def convert_Click_data():
+    root = "aa"
+    splited_data = split_data(root)
+    merged_splited_data = two_to_one_csv(splited_data)
+    shutil.rmtree(root)
+    shutil.rmtree(splited_data)
+    os.rename(merged_splited_data,root)
 
 if __name__ == '__main__':
     # pth_to_pt()
 
-    # dir = "TripleClick"
-    # for file in os.listdir("content/" + dir):
-    #     acc = pd.read_csv('content/'+dir+'/'+file+'/ACC.csv')
-    #     gyro = pd.read_csv('content/'+dir+'/'+file+'/GYRO.csv')
-    #     plot_data(acc, gyro,dir, file)
-    # pt_to_ptl()
-    # plot_dir("Collection")
 
-    # convert_to_edgeimpulse("content1","edge1" )
+    # pt_to_ptl("data_23_edge_output_converted_augmented")
 
-    edgeimpulse_to_csv("edge_after","edge_after_converted")
+    # convert_to_edgeimpulse("aa" )
+    # edgeimpulse_to_csv("data_23_edge_output")
+    # augment()
+    # convert_Click_data()
+    # get_n_nothing_from_content(220)
+    pass
+
+
+
+
+
+
