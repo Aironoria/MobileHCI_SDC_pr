@@ -239,9 +239,7 @@ def random_sample_n(root,num):
         os.remove(os.path.join(root,"Nothing",file))
     return root
 
-def augment():
-    root="data_23_edge_output_converted"
-
+def augment(root):
     for gesture in os.listdir(root):
         save_dir = os.path.join(root+"_augmented",gesture)
         if not os.path.exists(save_dir):
@@ -249,8 +247,8 @@ def augment():
         if gesture == "Nugget" or gesture == "Hamburg":
             for file in os.listdir(os.path.join(root,gesture)):
                 df = pd.read_csv(os.path.join(root,gesture,file))
-                for i in range(3):
-                    df.loc[i *10 : 379 + i*10 ].to_csv(os.path.join(save_dir,str(len(os.listdir(save_dir)))+".csv"), index=False)
+                for i in [0,5,10,15,20]:
+                    df.loc[i : 379 + i ].to_csv(os.path.join(save_dir,str(len(os.listdir(save_dir)))+".csv"), index=False)
         else:
             for file in os.listdir(os.path.join(root,gesture)):
                 df = pd.read_csv(os.path.join(root, gesture, file))
@@ -283,13 +281,16 @@ def get_n_nothing_from_content(nums):
     shutil.rmtree(splited_data)
     os.rename(sampled_data,save_dir)
 
-def convert_Click_data():
-    root = "aa"
+def convert_Click_data(root):
     splited_data = split_data(root)
     merged_splited_data = two_to_one_csv(splited_data)
     shutil.rmtree(root)
     shutil.rmtree(splited_data)
     os.rename(merged_splited_data,root)
+
+def print_dir_len(dir):
+    for gesture in os.listdir(dir):
+        print(gesture + str(len(os.listdir(os.path.join(dir,gesture)))))
 
 if __name__ == '__main__':
     # pth_to_pt()
@@ -297,11 +298,17 @@ if __name__ == '__main__':
 
     # pt_to_ptl("data_23_edge_output_converted_augmented")
 
-    # convert_to_edgeimpulse("aa" )
-    # edgeimpulse_to_csv("data_23_edge_output")
-    # augment()
-    # convert_Click_data()
-    # get_n_nothing_from_content(220)
+    # convert_to_edgeimpulse("data_24" )
+    # edgeimpulse_to_csv("data_24_edge_output")
+    augment("data_24_edge_output_converted")
+    # convert_Click_data("click")
+    # get_n_nothing_from_content(500)
+
+    # for gesture in os.listdir("data_24_edge_output_converted_augmented"):
+    #     for file in os.listdir(os.path.join("data_24_edge_output_converted_augmented",gesture)):
+    #         if len(pd.read_csv(os.path.join("data_24_edge_output_converted_augmented",gesture,file))) != 380:
+    #             print(os.path.join(gesture,file))
+
     pass
 
 

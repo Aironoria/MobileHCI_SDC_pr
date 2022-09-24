@@ -88,7 +88,7 @@ def get_save_dir(prefix):
 
 
 for i in [3]:
-  root = "data_23_edge_output_converted_augmented"
+  root = "data_24_edge_output_converted_augmented"
   train_dataset, test_dataset = data.load_dataset(root)
   print("Train dataset {} , Test Dataset {}, Total {} ".format(len(train_dataset), len(test_dataset),len(train_dataset)+len(test_dataset)))
   train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
@@ -103,7 +103,7 @@ for i in [3]:
   test_loss = []
   test_acc = []
 
-  for epoch in range(config.n_epochs):
+  for epoch in range(300):
     train_one_epoch(epoch)
     eval(epoch)
     if epoch% 25 ==0:
