@@ -59,7 +59,7 @@ class FoodDataset(Dataset):
         a = index // len(self.path_list)
         index= index  % len(self.path_list)
         path = self.path_list[index]
-        label = path.split("/")[1]
+        label = path.split("/")[-2]
         label =torch.tensor(self.labels.index(label))
 
         item = pd.read_csv(path)
@@ -81,8 +81,15 @@ class FoodDataset(Dataset):
 
         item = torch.reshape(item.T,(6,20,-1))
 
+
+
         if self.transform:
             item = self.transform(item)
+        # use_gyro = True
+        # use_gyro = False
+
+        if not config.use_gyro:
+            item = item.split(3,0)[0]
         return item ,label
 
     def get_data_list(self, root):
@@ -98,16 +105,16 @@ class FoodDataset(Dataset):
         return res
 
 def split(dataset):
-    train_size = int(len(dataset) * 0.8)
+    train_size = int(len(dataset) * 0.9)
     test_size = len(dataset) - train_size
     return torch.utils.data.random_split(dataset, [train_size, test_size])
 
 def load_dataset(root):
-    seed = 1234
-    torch.manual_seed(seed)
-    random.seed(seed)
-    dataset = FoodDataset(root)
-    return split(dataset)
+    # seed = 1234
+    # torch.manual_seed(seed)
+    # random.seed(seed)
+    # dataset = FoodDataset(root)
+    return FoodDataset(os.path.join(root,"train")), FoodDataset(os.path.join(root,"test"))
 
 
 # a = FoodDataset("content")
@@ -150,10 +157,11 @@ def getStat(train_data):
 
 if __name__ == "__main__":
 
-    a = FoodDataset("data_23_edge_output_converted")
+    a = load_dataset("data_26_augmented_90%")[0]
     a.transform=None
-    getStat(a)
-    print(a.labels)
+    # getStat(a)
+    # print(a.labels)
+    print(a[0])
 
     # train,test =  load_dataset("content")
 

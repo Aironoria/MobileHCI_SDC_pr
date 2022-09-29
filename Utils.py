@@ -187,10 +187,10 @@ def convert_to_edgeimpulse(root):
         dir = os.path.join(root,gesture)
         for filename in os.listdir(dir):
             acc = pd.read_csv(dir + "/" + filename + "/ACC.csv")
-            gyro = pd.read_csv(dir + '/' + filename + '/GYRO.csv')
-            # gyro = gyro/100
-            data = pd.concat([acc,gyro],axis=1)
-            data.to_csv(save_dir+ "/"+ gesture + "."+filename+".csv",index_label="timestamp")
+            # gyro = pd.read_csv(dir + '/' + filename + '/GYRO.csv')
+            # gyro = gyro/1000
+            # data = pd.concat([acc,gyro],axis=1)
+            acc.to_csv(save_dir+ "/"+ gesture + "."+filename+".csv",index_label="timestamp")
 
 def edgeimpulse_to_csv(root):
     save_dir = root+"_converted"
@@ -236,7 +236,7 @@ def split_data(root):
 def random_sample_n(root,num):
     unselected = random.sample(os.listdir(root+"/Nothing"), len(os.listdir(root+"/Nothing")) - num)
     for file in unselected:
-        os.remove(os.path.join(root,"Nothing",file))
+        os.remove(os.path.join(root, "data_25/Nothing", file))
     return root
 
 def augment(root):
@@ -253,7 +253,7 @@ def augment(root):
             for file in os.listdir(os.path.join(root,gesture)):
                 df = pd.read_csv(os.path.join(root, gesture, file))
                 df.loc[10 :390-1].to_csv(os.path.join(save_dir,str(len(os.listdir(save_dir)))+".csv"),index=False)
-    pass
+    return root+"_augmented"
 
 def two_to_one_csv(root):
     for gesture in os.listdir(root):
@@ -289,18 +289,60 @@ def convert_Click_data(root):
     os.rename(merged_splited_data,root)
 
 def print_dir_len(dir):
+    total = 0
     for gesture in os.listdir(dir):
-        print(gesture + str(len(os.listdir(os.path.join(dir,gesture)))))
+        length =len(os.listdir(os.path.join(dir,gesture)))
+        total += length
+        print(gesture + str(length))
+    print("Total: " + str(total))
+    print()
+
+
+def split_and_augment(root):
+    train_ratio = 0.8
+    split_train_test(root,train_ratio)
+    train_dir= augment(root +"_train")
+    test_dir = augment(root+"_test")
+    dst = root + "_augmented_" + str((int) (train_ratio *100)) +"%"
+    os.mkdir(dst)
+    shutil.move(train_dir, dst+ "/train")
+    shutil.move(test_dir, dst +"/test")
+    shutil.rmtree(root + "_train")
+    shutil.rmtree(root+"_test")
+
+
+
+
+def split_train_test(root,train_ratio):
+    for gesture in os.listdir(root):
+        list = os.listdir(os.path.join(root,gesture))
+        random.shuffle(list)
+        train_size = int(len(list) * train_ratio)
+        train_list = list[: train_size]
+        test_list = list[train_size:]
+
+        train_dir = os.path.join(root+ "_train",gesture)
+        if not os.path.exists(train_dir):
+            os.makedirs(train_dir)
+        test_dir = os.path.join(root+ "_test",gesture)
+        if not os.path.exists(test_dir):
+            os.makedirs(test_dir)
+
+        for file in train_list:
+            shutil.copy(os.path.join(root,gesture,file), os.path.join(train_dir,file))
+        for file in test_list:
+            shutil.copy(os.path.join(root,gesture,file), os.path.join(test_dir,file))
+
 
 if __name__ == '__main__':
     # pth_to_pt()
 
 
-    # pt_to_ptl("data_23_edge_output_converted_augmented")
+    # pt_to_ptl("data_26_augmented_90%nogyro")
 
-    # convert_to_edgeimpulse("data_24" )
+    # convert_to_edgeimpulse("new")
     # edgeimpulse_to_csv("data_24_edge_output")
-    augment("data_24_edge_output_converted")
+    # augment("data_24_edge_output_converted")
     # convert_Click_data("click")
     # get_n_nothing_from_content(500)
 
@@ -308,8 +350,21 @@ if __name__ == '__main__':
     #     for file in os.listdir(os.path.join("data_24_edge_output_converted_augmented",gesture)):
     #         if len(pd.read_csv(os.path.join("data_24_edge_output_converted_augmented",gesture,file))) != 380:
     #             print(os.path.join(gesture,file))
+    # split_data("nnothing")
+    # two_to_one_csv("nnothing_splited")
+    # print_dir_len("data_24_edge_output_converted")
+    # convert_Click_data("aa")
+    # print_dir_len("jl&xq")
+    # random_sample_n("d",310)
+    # augment("data_25")
 
+    # split_and_augment("data_26")
+    #
+    # print_dir_len("data_26_augmented_90%/train")
+    # print_dir_len("data_26_augmented_90%/test")
+    plot_dir("Collection")
     pass
+
 
 
 

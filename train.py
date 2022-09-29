@@ -19,7 +19,7 @@ def plot_confusion_matrix(train,save,save_dir=""):
   data_loader = train_loader if train else test_loader
   title = "conf_train.jpg" if train else "conf_test.jpg"
   net.eval()
-  class_indict = data_loader.dataset.dataset.get_label_dict()
+  class_indict = data_loader.dataset.get_label_dict()
   label = [label for _, label in class_indict.items()]
   confusion = ConfusionMatrix(num_classes=len(label), labels=label)
   with torch.no_grad():
@@ -75,27 +75,42 @@ def train_one_epoch(epoch):
   train_loss.append(loss_)
   correct =correct *100 / data_len
   train_acc.append(correct)
+
   # print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%".format( epoch,loss_,correct),end="\t")
 
 
 def get_save_dir(prefix):
   root="res"
   size = len(train_dataset) +len(test_dataset)
-  res= os.path.join( root,prefix +"_"+ str(size)  +"_" + str(config.n_epochs) )
+  if not config.use_gyro:
+    suffix = "_fft"
+  else:
+    suffix = ""
+  res= os.path.join( root,prefix +"_"+ str(size)  +"_" + str(config.n_epochs) +suffix )
   if not os.path.exists(res):
     os.makedirs(res)
   return res
 
 
-for i in [3]:
-  root = "data_24_edge_output_converted_augmented"
+for i in [0]:
+  if i ==0:
+    config.use_gyro =True
+  else:
+    config.use_gyro =False
+
+  if not config.use_gyro:
+    suffix= "fft"
+  else:
+    suffix=""
+
+  root = "data_26_augmented_80%"
   train_dataset, test_dataset = data.load_dataset(root)
   print("Train dataset {} , Test Dataset {}, Total {} ".format(len(train_dataset), len(test_dataset),len(train_dataset)+len(test_dataset)))
   train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
   test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
-  net = model.Net(root)
-  # net = torch.load("model.pt")
+  net = model.Net(root+"/train")
+  # net = torch.load(root+ suffix +".pt")
   optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
   train_loss = []
@@ -103,16 +118,19 @@ for i in [3]:
   test_loss = []
   test_acc = []
 
-  for epoch in range(300):
+  for epoch in range(250):
     train_one_epoch(epoch)
     eval(epoch)
     if epoch% 25 ==0:
       print("epoch {:4} Train Loss: {:20.4f} ACC: {:20.2f}%  Test Loss: {:20.4f} ACC: {:20.2f}%"
             .format(epoch, train_loss[-1], train_acc[-1],test_loss[-1],test_acc[-1]))
       plot_confusion_matrix(train=True,save=False)
+    # if abs(train_loss[-2] - train_loss[-1]) < 0.0005:
+    #   break
 
   pic_save_dir = get_save_dir(root)
-  torch.save(net, root +'.pt')
+
+  torch.save(net, root +suffix +'.pt')
   plot_confusion_matrix(train=True,save=True,save_dir=pic_save_dir)
   plot_confusion_matrix(train=False, save=True,save_dir=pic_save_dir)
   Utils.plot_loss(pic_save_dir, train_loss, train_acc, test_loss, test_acc)

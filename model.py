@@ -1,5 +1,6 @@
 import os
 
+import torch.fft
 import torch.nn as nn
 import torch.nn.functional as F
 import config
@@ -26,7 +27,8 @@ class Net(nn.Module):
         self.shape_1 =  30 *18*17
         # self.shape_1 = 30 *21 *20
         super(Net,self).__init__()
-        self.conv1 = nn.Conv2d(6,10,kernel_size=k_size)
+        input_channel = 6 if config.use_gyro else 3
+        self.conv1 = nn.Conv2d(input_channel,10,kernel_size=k_size)
         self.conv2 = nn.Conv2d(10,30,kernel_size=k_size)
         self.fc1 =  nn.Linear(self.shape_1, 1000)
         self.fc2 = nn.Linear(1000,100)
